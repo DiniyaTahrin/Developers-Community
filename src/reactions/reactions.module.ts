@@ -18,5 +18,6 @@ import { Reaction, ReactionSchema } from './schemas/reactions.schema';
   ],
   providers: [ReactionsService],
   controllers: [ReactionsController],
+  exports: [ReactionsService],
 })
 export class ReactionsModule {}

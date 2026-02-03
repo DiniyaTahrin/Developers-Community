@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Comment } from '../comments/schemas/comment.schema';
 import { Post } from '../posts/schemas/post.schema';
 import { User } from '../users/schemas/user.schema';
@@ -68,5 +68,32 @@ export class ReactionsService {
     // Create new reaction
     const reaction = new this.reactionModel(reactionData);
     return reaction.save();
+  }
+
+  async getReactionCountForPost(postId: string) {
+    // Aggregate reactions for this post
+    const result = await this.reactionModel.aggregate([
+      { $match: { post: new Types.ObjectId(postId) } }, // only reactions for this post
+      {
+        $group: {
+          _id: '$post', // group by postId
+          likes: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'like'] }, 1, 0], // +1 if type is 'like'
+            },
+          },
+          dislikes: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'dislike'] }, 1, 0], // +1 if type is 'dislike'
+            },
+          },
+        },
+      },
+    ]);
+
+    // If no reactions, return 0
+    if (result.length === 0) return { likes: 0, dislikes: 0 };
+
+    return { likes: result[0].likes, dislikes: result[0].dislikes };
   }
 }

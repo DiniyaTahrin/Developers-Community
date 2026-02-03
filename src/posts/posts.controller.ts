@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import type { Request } from 'express';
@@ -20,5 +28,10 @@ export class PostsController {
   @Get()
   async findAll() {
     return this.postsService.findAll(); // public route
+  }
+
+  @Get(':id')
+  async findOne(@Param('id') postId: string) {
+    return this.postsService.findOne(postId);
   }
 }

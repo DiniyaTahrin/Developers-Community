@@ -23,31 +23,44 @@ export class CommentsService {
     private readonly reactionsService: ReactionsService,
   ) {}
 
-  async create(createCommentDto: CreateCommentDto, userId: string) {
-    const { postID, content } = createCommentDto;
+  async create(
+    postId: string,
+    userId: string,
+    createCommentDto: CreateCommentDto,
+  ) {
+    const { content, parentCommentId } = createCommentDto;
 
-    //  Check if user exists
+    // Check if user exists
     const user = await this.userModel.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    //  Check if post exists
-    const post = await this.postModel.findById(postID);
+    // Check if post exists
+    const post = await this.postModel.findById(postId);
     if (!post) {
       throw new NotFoundException('Post not found');
     }
 
-    //  Create comment
+    // If replying, check parent comment
+    const parentComment = parentCommentId
+      ? await this.commentModel.findById(parentCommentId)
+      : null;
+
+    if (parentCommentId && !parentComment) {
+      throw new NotFoundException('Parent comment not found');
+    }
+
+    // Create comment
     const comment = new this.commentModel({
       content,
       author: user._id,
       post: post._id,
+      parentComment: parentComment ? parentComment._id : undefined,
     });
 
     await comment.save();
 
-    // Log activity
     this.logger.log(`Comment created by ${user.email} on post "${post.title}"`);
 
     return comment;

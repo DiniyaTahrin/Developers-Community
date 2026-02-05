@@ -11,5 +11,7 @@ export class Comment extends Document {
   author: Types.ObjectId;
   @Prop({ type: Types.ObjectId, ref: Post.name, required: true })
   post: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: Comment.name, default: null })
+  parentComment: Types.ObjectId | null;
 }
 export const CommentSchema = SchemaFactory.createForClass(Comment);

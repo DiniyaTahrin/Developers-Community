@@ -16,15 +16,17 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
+  @Post('post/:postId')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @Post()
   async create(
+    @Param('postId') postId: string,
     @Body() createCommentDto: CreateCommentDto,
     @Req() req: Request,
   ) {
     const userId = (req.user as { userId: string }).userId;
-    return this.commentsService.create(createCommentDto, userId);
+
+    return this.commentsService.create(postId, userId, createCommentDto);
   }
 
   @Get(':postId')

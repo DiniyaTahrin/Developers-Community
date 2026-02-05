@@ -96,4 +96,38 @@ export class ReactionsService {
 
     return { likes: result[0].likes, dislikes: result[0].dislikes };
   }
+
+  async getReactionCountForComment(commentId: string) {
+    const result = await this.reactionModel.aggregate([
+      {
+        $match: {
+          comment: new Types.ObjectId(commentId),
+        },
+      },
+      {
+        $group: {
+          _id: '$comment',
+          likes: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'like'] }, 1, 0],
+            },
+          },
+          dislikes: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'dislike'] }, 1, 0],
+            },
+          },
+        },
+      },
+    ]);
+
+    if (result.length === 0) {
+      return { likes: 0, dislikes: 0 };
+    }
+
+    return {
+      likes: result[0].likes,
+      dislikes: result[0].dislikes,
+    };
+  }
 }

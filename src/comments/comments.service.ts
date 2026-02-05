@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
+import { ReactionsService } from 'src/reactions/reactions.service';
 import { Post } from '../posts/schemas/post.schema';
 import { User } from '../users/schemas/user.schema';
 import { CreateCommentDto } from './dto/create-comment.dto';
@@ -19,6 +20,7 @@ export class CommentsService {
 
     @InjectModel(Post.name)
     private readonly postModel: Model<Post>,
+    private readonly reactionsService: ReactionsService,
   ) {}
 
   async create(createCommentDto: CreateCommentDto, userId: string) {
@@ -51,11 +53,24 @@ export class CommentsService {
     return comment;
   }
 
-  async findAllByPost(postID: string) {
-    return this.commentModel
-      .find({ post: postID })
+  async findAllByPost(postId: string) {
+    const comments = await this.commentModel
+      .find({ post: new Types.ObjectId(postId) })
       .populate('author', 'name email')
-      .populate('post', 'title content')
       .exec();
+
+    return Promise.all(
+      comments.map(async (comment) => {
+        const reactions =
+          await this.reactionsService.getReactionCountForComment(
+            comment._id.toString(),
+          );
+
+        return {
+          ...comment.toObject(),
+          reactions,
+        };
+      }),
+    );
   }
 }

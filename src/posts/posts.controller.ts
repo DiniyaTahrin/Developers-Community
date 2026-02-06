@@ -10,7 +10,6 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import type { Request } from 'express';
-import { successResponse } from 'src/common/utils/response.util';
 import { CreatePostDto } from './dto/create-post.dto';
 import { PostsService } from './posts.service';
 
@@ -25,7 +24,7 @@ export class PostsController {
     const userId = (req.user as { userId: string }).userId;
     // comes from JwtStrategy validate()
     const post = await this.postsService.create(createPostDto, userId);
-    return successResponse('Post created successfully', post);
+    return post;
   }
 
   @Get()
@@ -35,6 +34,7 @@ export class PostsController {
 
   @Get(':id')
   async findOne(@Param('id') postId: string) {
-    return this.postsService.findOne(postId);
+    const onePost = await this.postsService.findOne(postId);
+    return onePost;
   }
 }

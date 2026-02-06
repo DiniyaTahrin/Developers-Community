@@ -10,8 +10,10 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import type { Request } from 'express';
+import { successResponse } from 'src/common/utils/response.util';
 import { CreatePostDto } from './dto/create-post.dto';
 import { PostsService } from './posts.service';
+
 @Controller('posts')
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
@@ -22,7 +24,8 @@ export class PostsController {
   async create(@Body() createPostDto: CreatePostDto, @Req() req: Request) {
     const userId = (req.user as { userId: string }).userId;
     // comes from JwtStrategy validate()
-    return this.postsService.create(createPostDto, userId);
+    const post = await this.postsService.create(createPostDto, userId);
+    return successResponse('Post created successfully', post);
   }
 
   @Get()

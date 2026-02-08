@@ -6,6 +6,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Comment } from '../comments/schemas/comment.schema';
+import { EmailService } from '../email/email.service';
 import { Post } from '../posts/schemas/post.schema';
 import { User } from '../users/schemas/user.schema';
 import { Reaction } from './schemas/reactions.schema';
@@ -24,6 +25,7 @@ export class ReactionsService {
 
     @InjectModel(User.name)
     private readonly userModel: Model<User>,
+    private readonly emailService: EmailService,
   ) {}
 
   async createReaction(
@@ -32,23 +34,24 @@ export class ReactionsService {
     type: 'like' | 'dislike',
     targetType: 'post' | 'comment',
   ) {
-    // Validate user
+    //  Validate user
     const user = await this.userModel.findById(userId);
     if (!user) throw new NotFoundException('User not found');
 
-    // Validate target and assign correct field
+    //  Validate target and prepare reaction data
     const reactionData: Partial<Reaction> = { user: user._id, type };
+
     if (targetType === 'post') {
       const post = await this.postModel.findById(targetId);
       if (!post) throw new NotFoundException('Post not found');
       reactionData.post = post._id;
-    } else if (targetType === 'comment') {
+    } else {
       const comment = await this.commentModel.findById(targetId);
       if (!comment) throw new NotFoundException('Comment not found');
       reactionData.comment = comment._id;
     }
 
-    // Check existing reaction
+    //  Check existing reaction
     const existingReaction = await this.reactionModel.findOne({
       user: user._id,
       post: reactionData.post,
@@ -59,15 +62,42 @@ export class ReactionsService {
       throw new BadRequestException(`You already reacted with '${type}'`);
     }
 
-    // If reaction exists but type is different → update
     if (existingReaction) {
       existingReaction.type = type;
-      return existingReaction.save();
+      await existingReaction.save();
+    } else {
+      await new this.reactionModel(reactionData).save();
     }
 
-    // Create new reaction
-    const reaction = new this.reactionModel(reactionData);
-    return reaction.save();
+    //  Email logic (post only)
+    if (targetType === 'post') {
+      const dislikeCount = await this.reactionModel.countDocuments({
+        post: reactionData.post,
+        type: 'dislike',
+      });
+
+      // Send ONLY when crossing threshold
+      if (dislikeCount === 11) {
+        const post = await this.postModel
+          .findById(reactionData.post)
+          .populate('author');
+
+        if (post && post.author) {
+          try {
+            //console.log(' Attempting to send dislike email...');
+            await this.emailService.sendPostDislikeWarning(
+              (post.author as any).email,
+              post.title,
+            );
+          } catch (err) {
+            // Email failure should NOT break API
+            console.error('Failed to send dislike warning email', err);
+          }
+        }
+      }
+    }
+
+    return { success: true };
   }
 
   async getReactionCountForPost(postId: string) {

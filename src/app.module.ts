@@ -13,6 +13,7 @@ import { ReactionsModule } from './reactions/reactions.module';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
     CommentsModule,
     AuthModule,
     ReactionsModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [

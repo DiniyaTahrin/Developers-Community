@@ -39,56 +39,14 @@ export class PostsController {
     return this.postsService.findAll(); // public route
   }
 
+  @Get('ranked')
+  async getRankedPosts() {
+    return this.postsService.getRankedPosts();
+  }
+
   @Get(':id')
   async findOne(@Param('id') postId: string) {
     const onePost = await this.postsService.findOne(postId);
     return onePost;
   }
 }
-
-// posts.controller.ts
-// import {
-//   Body,
-//   Controller,
-//   Get,
-//   Param,
-//   Post,
-//   Req,
-//   UseGuards,
-// } from '@nestjs/common';
-// import { AuthGuard } from '@nestjs/passport';
-// import { ApiBearerAuth } from '@nestjs/swagger';
-// import type { Request } from 'express';
-// import { CreatePostDto } from './dto/create-post.dto';
-// import { PostsService } from './posts.service';
-// import { Throttle } from '@nestjs/throttler';
-// import { CustomThrottlerGuard } from '../common/guards/custom-throttler.guard';
-
-// @Controller('posts')
-// export class PostsController {
-//   constructor(private readonly postsService: PostsService) {}
-
-//   @UseGuards(AuthGuard('jwt'), CustomThrottlerGuard)
-//   @ApiBearerAuth()
-//   @Throttle({
-//     default: {
-//       limit: 10,                // 10 requests
-//       ttl: 60 * 60 * 1000,      // per 1 hour
-//     },
-//   })
-//   @Post()
-//   async create(@Body() createPostDto: CreatePostDto, @Req() req: Request) {
-//     const userId = (req.user as { userId: string }).userId;
-//     return this.postsService.create(createPostDto, userId);
-//   }
-
-//   @Get()
-//   async findAll() {
-//     return this.postsService.findAll();
-//   }
-
-//   @Get(':id')
-//   async findOne(@Param('id') postId: string) {
-//     return this.postsService.findOne(postId);
-//   }
-// }

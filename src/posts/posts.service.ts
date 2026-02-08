@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { Comment } from 'src/comments/schemas/comment.schema';
 import { ReactionsService } from 'src/reactions/reactions.service';
 import { User } from '../users/schemas/user.schema';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -10,6 +11,7 @@ export class PostsService {
   private readonly logger = new Logger(PostsService.name);
 
   constructor(
+    @InjectModel(Comment.name) private readonly commentModel: Model<Comment>,
     @InjectModel(Post.name) private readonly postModel: Model<Post>,
     @InjectModel(User.name) private readonly userModel: Model<User>,
     private readonly reactionsService: ReactionsService,
@@ -47,5 +49,46 @@ export class PostsService {
       ...post.toObject(),
       reactions: reactionCount, // { likes: 5, dislikes: 2 }
     };
+  }
+
+  async getRankedPosts() {
+    const posts = await this.postModel.find();
+
+    const postsWithScore = await Promise.all(
+      posts.map(async (post) => {
+        try {
+          const commentCount = await this.commentModel.countDocuments({
+            post: post._id,
+          });
+
+          const { likes = 0, dislikes = 0 } =
+            await this.reactionsService.getReactionCountForPost(
+              post._id.toString(),
+            );
+
+          const score = commentCount + likes - dislikes;
+
+          // Optional: debug log
+          console.log(
+            `Post ${post._id}: comments=${commentCount}, likes=${likes}, dislikes=${dislikes}, score=${score}`,
+          );
+
+          return {
+            ...post.toObject(),
+            commentCount,
+            likes,
+            dislikes,
+            score,
+          };
+        } catch (err) {
+          console.error('Failed to rank post:', post._id, err);
+          return null;
+        }
+      }),
+    );
+
+    return postsWithScore
+      .filter((post): post is NonNullable<typeof post> => post !== null)
+      .sort((a, b) => b.score - a.score);
   }
 }
